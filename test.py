@@ -20,7 +20,7 @@ from nni.utils import merge_parameter
 
 from tools import AverageMeter, Dispatcher, reset_meters, error_evaluation
 from datasets import MIX
-from model import CGAA, Angular_loss
+from model import CGA, Angular_loss
 from thop import profile, clever_format
 
 logger = logging.getLogger()
@@ -228,7 +228,10 @@ def main(args):
     
     # preparing MODEL
     device = args.device
-    model = CGAA(normalization='CGIN').to(device)
+    model = CGA(normalization='CGIN_squ').to(device)
+    from torchsummary import summary
+    summary(model, (3, 512, 512))
+    exit()
     # print(model)
     print_model_flops(model, args)
     # preparing OPTIMIZER

@@ -3,9 +3,9 @@ import math
 import torch
 from . import SqueezeNet_ada, rgb2uvHist, ColorChannelAttention
 
-class CGAA(nn.Module):
+class CGA(nn.Module):
     def __init__(self, normalization):
-        super(CGAA, self).__init__()
+        super(CGA, self).__init__()
         # add uvHist
         self.hist2ccm = rgb2uvHist()
 

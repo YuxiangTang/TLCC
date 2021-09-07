@@ -39,7 +39,7 @@ class rgb2uvHist(nn.Module):
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=True),
             # nn.Dropout(p=0.5),
-            nn.Conv2d(128, 256, kernel_size=3, stride=2),
+            nn.Conv2d(128, 256, kernel_size=2, stride=2),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.5),
             nn.Conv2d(256, 512, kernel_size=2, stride=1),
