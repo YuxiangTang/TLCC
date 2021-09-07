@@ -1,14 +1,31 @@
+"""
+This file support the Function Frgb2uv() that convert 
+the rgb image to uv parameterized  RGB-uv histogram.
+
+Reference: "Sensor-Independent Illumination Estimation for DNN Models"
+url: http://cvil.eecs.yorku.ca/projects/public_html/siie/index.html
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from .SqueezeNet_adain import fire
 
 class rgb2uvHist(nn.Module):
-    def __init__(self, hist_num = 60):
+    """
+    Convert the rgb image to uv parameterized  RGB-uv histogram.
+    
+    :param image_size: Resize the image to the same size to make 
+                       the number of pixels consistent.
+    :param hist_num: the number of histogram.
+    
+    Return: A Tensor with size 3 * hist_num * hist_num.
+    """
+    def __init__(self, image_size:int = 150, hist_num:int = 61):
         super(rgb2uvHist, self).__init__()
-        self.hist_num = hist_num + 1
-        self.eps = 6.4 / hist_num
-        self.size = 150
+        self.hist_num = hist_num 
+        self.eps = 6.4 / (hist_num - 1)
+        self.size = image_size
         self.A = torch.nn.Parameter(torch.repeat_interleave(torch.unsqueeze(torch.arange(-3.2, 3.21, self.eps), dim=0), 
                                                             self.size * self.size, dim=0).view((1, 1, -1, self.hist_num)),
                                     requires_grad = False)
@@ -18,22 +35,7 @@ class rgb2uvHist(nn.Module):
         self.C = nn.Parameter(torch.ones(3).view((1, 3, 1, 1)).float()) 
         self.lower = torch.tensor(1e-9)
         
-        # sensor-net
-        '''
-        self.conv = nn.Sequential(                 
-            nn.Conv2d(3, 128, kernel_size=3, stride=2),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=True),
-            # nn.Dropout(p=0.5),
-            nn.Conv2d(128, 256, kernel_size=3, stride=2),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
-            nn.Conv2d(256, 512, kernel_size=2, stride=1),
-            nn.ReLU(inplace=True),
-        )
-        '''
-        
-        # sensor-net
+        # color extraction
         self.conv = nn.Sequential(                 
             nn.Conv2d(3, 128, kernel_size=3, stride=2),
             nn.ReLU(inplace=True),
@@ -46,8 +48,6 @@ class rgb2uvHist(nn.Module):
             nn.ReLU(inplace=True),
         )
         self.fc = nn.Sequential(
-            # nn.AdaptiveAvgPool2d(1),
-            # nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=True),
             nn.Conv2d(512, 9, kernel_size=6, stride=1),
         )
     
@@ -77,8 +77,5 @@ class rgb2uvHist(nn.Module):
     def forward(self, x):
         x = self.rgb2uvhist_param(x)
         feature = self.conv(x)
-        # print(feature.shape)
-        # x_out = feature.view(bn, -1)
         x_out = self.fc(feature).view(feature.shape[0], 1, 3, 3)
-        # x_out = self.MatrixNormalizationLayer(x_out)
-        return x_out, feature# .clone().detach()
+        return x_out, feature

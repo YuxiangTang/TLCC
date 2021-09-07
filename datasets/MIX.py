@@ -1,3 +1,8 @@
+"""
+The dataloader that support CCD, NUS 8, Cube+ and Place205.
+When you plan to use this file, you need preprocess the image first.
+"""
+
 import numpy as np
 import cv2
 from .base_dataset import base_dataset
@@ -8,7 +13,24 @@ from tools import *
 
 class MIX(base_dataset):
     def __init__(self, dataset_name, data_dir, mode, fold_idx, minik = 1, multiple=5, input_size = 512, aug_num=4,
-     statistic_mode=True,camera_trans=None, bright_occ_mode=False, blur_mode=False):
+     statistic_mode=True, camera_trans=None, bright_occ_mode=False, blur_mode=False):
+        """
+        :param dataset_name: the name
+        :param data_dir: the location of the data and image index file
+        :param mode: Train or Valid
+        :param fold_idx: set fold_idx as Test fold.
+        :param minik: Minkowski norm. to control the statistic.
+        :param multiple: Multiply the amount of data in each epoch. 
+        :param input_size: the image size
+        :param aug_num: due to an image is too large, we augment it multiple 
+                        times as we read it once.
+        :param statistic_mode: Bool, if True use statistic label, otherwise use illumination label.
+        :param camera_trans: inter-camera transformation
+        
+        :param bright_occ_mode, blur_mode: Abandoned!
+        """
+        
+        
         base_dataset.__init__(self, data_dir, minik, input_size, mode)
         self.dataset_name = dataset_name
         self.camera_trans = camera_trans
@@ -109,7 +131,6 @@ class MIX(base_dataset):
         img = img / np.max(img)
         idx1, idx2, _ = np.where(mask == False)
         img[idx1, idx2, :] = 0 # 1e-5
-        # R = self.process_LRC(img, ill, dynamic)
         return img, ill, camera
     
     def load_cube_jpg(self, img_path):

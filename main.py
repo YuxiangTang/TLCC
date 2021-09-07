@@ -9,7 +9,7 @@ import argparse
 
 from tools import AverageMeter, Dispatcher, reset_meters, error_evaluation
 from datasets import MIX, data_prefetcher
-from model import CGAA, Angular_loss
+from model import CGA, Angular_loss
 from thop import profile, clever_format
 import nni
 
@@ -34,11 +34,9 @@ def get_params():
     parser.add_argument('--exp_name', default='TLCC_squez_sota_fold0')
     parser.add_argument('--fold_idx', default=0)
     parser.add_argument('--load_ckpt', default="None")
-    parser.add_argument('--bright_occ_mode', default=False)
-    parser.add_argument('--blur_mode', default=False)
+    parser.add_argument('--bright_occ_mode', default=False) # abandoned
+    parser.add_argument('--blur_mode', default=False)  # abandoned
     parser.add_argument('--num_workers', default=8)
-    parser.add_argument('--step', default=0)
-    parser.add_argument('--finetuning', type=bool, default=False)
     parser.add_argument('--statistic_mode', type=bool, default=True)
     args, _ = parser.parse_known_args()
     return args
@@ -207,7 +205,7 @@ def train(training_object, model, optimizer, criterion, loader, Meter_dict, disp
         loss = ang_loss
         warm_up_epoch -= 1
         if warm_up_epoch > 0:
-            loss = loss / 5
+            loss = loss / 3
             
         loss.backward()
         Meter_dict[training_object].update(ang_loss.item())
@@ -262,7 +260,7 @@ def main(args):
     
     # preparing MODEL
     device = args.device
-    model = CGAA(normalization='CGIN_squ').to(device)
+    model = CGA(normalization='CGIN_squ').to(device)
     print(model)
     print_model_flops(model, args)
     # preparing OPTIMIZER
@@ -291,22 +289,6 @@ def main(args):
 
     reset_meters(Meter_dict)
     disp = Dispatcher(step, epoch_start, args.exp_name, args.save_path)
-    
-    # if args.finetuning:
-    #     loader_dict = {
-    #         'NUS': (
-    #             gen_loader(['NUS_half'], None, 'train', args=args, multiple=[1]),
-    #             gen_loader(['NUS_half'], None, 'valid', args=args)
-    #             ),
-    #         'CC': (
-    #             gen_loader(['CC_half'], None, 'train', args=args, multiple=[5]),
-    #             gen_loader(['CC_half'], None, 'valid', args=args)
-    #             ),
-    #         'MIX': (gen_loader(['CC_ori', 'NUS_half'], None, 'train', args=args, multiple=[8, 4]), None)
-    #     }
-    #     optimizer = torch.optim.SGD([{'params':model.parameters() , 'lr':args.lr * 20, 'weight_decay':5e-5}])
-    #     print('Start Finetuning!')
-        
     
     for epoch in range(epoch_start, args.num_epochs): # max to num_epochs
         disp.time_start()

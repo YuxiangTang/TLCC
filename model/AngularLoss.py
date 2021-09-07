@@ -1,3 +1,7 @@
+"""
+Angular Loss = arccos(p', p) * 180 / pi
+"""
+
 import torch
 import torch.nn as nn
 import math
@@ -10,10 +14,7 @@ class Angular_loss(torch.nn.Module):
     def forward(self, pred, target):
         return torch.mean(self.angulor_loss(pred, target))
     
-    def angulor_loss(self, pred, target):
-        # pred = pred.double()
-        # target = target.double()
-        
+    def angulor_loss(self, pred, target):      
         pred = nn.functional.normalize(pred, dim=1)
         target = nn.functional.normalize(target, dim=1)
 

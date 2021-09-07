@@ -1,3 +1,9 @@
+"""
+Some methods about image augmentation.
+Followed by: FC4: Fully Convolutional Color Constancy with Confidence-weighted Pooling (CVPR 2017)
+github: https://github.com/yuanming-hu/fc4
+"""
+
 import math
 import cv2
 import torch

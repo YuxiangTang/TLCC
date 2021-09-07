@@ -1,3 +1,6 @@
+"""
+record time cost, epoch, step, exp_name, ckpt_path and best value.
+"""
 import time
 
 class Dispatcher(object):

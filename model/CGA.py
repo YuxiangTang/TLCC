@@ -11,7 +11,6 @@ class CGA(nn.Module):
 
         # backbone
         self.squeezenet = SqueezeNet_ada(3, normalization=normalization)
-        # self.cca = ColorChannelAttention(512, 64)
         self.fc = nn.Sequential(
                   nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=True),
                   nn.Conv2d(320 * 2, 64, kernel_size=6, stride=1, padding=3),
@@ -36,9 +35,6 @@ class CGA(nn.Module):
         return mat_norm
 
     def MatrixInverseLayer(self, mat):
-        # det = torch.det(mat).squeeze(dim=1)
-        # idx = torch.where(det < self.eps)[0]
-        # mat[idx, :, :, :] += (torch.rand((1,1,3,3), device=mat.device) / 1000)
         ccm_inv = torch.linalg.inv(mat)
         return ccm_inv
 
@@ -50,7 +46,6 @@ class CGA(nn.Module):
     
     def ill_convert(self, ill, ccm):
         ccm_inv = self.MatrixInverseLayer(ccm)
-        # ccm_inv = self.MatrixNormalizationLayer(ccm_inv, abs_mode=False)
         return torch.matmul(ill.unsqueeze(dim=1).unsqueeze(dim=1), ccm_inv.transpose(3, 2)).squeeze(dim=1).squeeze(dim=1)
     
 
@@ -59,8 +54,6 @@ class CGA(nn.Module):
         ccm = self.MatrixNormalizationLayer(ccm, abs_mode=True)
         x = self.img_convert(x, ccm)
         x = self.squeezenet(x, device_feature)
-        # x = self.fc1(x)
-        # x = self.fc2(x)
         x = self.fc(x)
         ill = nn.functional.normalize(torch.sum(x,dim=(2,3)), dim=1)
         ill = self.ill_convert(ill, ccm)

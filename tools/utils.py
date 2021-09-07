@@ -1,3 +1,8 @@
+"""
+Some tools, too messy ...
+Later to arrange ...
+"""
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -5,6 +10,24 @@ import matplotlib.pyplot as plt
 import matplotlib.pylab as pylab
 import math
 
+def error_evaluation(error_list):
+    es = error_list.copy()
+    es = torch.stack(es)
+    es = es.view((-1))
+    es = es.to('cpu').numpy()
+    es.sort()
+    ae = np.array(es).astype(np.float32)
+
+    x, y, z = np.percentile(ae, [25, 50, 75])
+    Mean = np.mean(ae)
+    Med = np.median(ae)
+    Tri = (x+ 2 * y + z)/4
+    T25 = np.mean(ae[:int(0.25 * len(ae))])
+    L25 = np.mean(ae[int(0.75 * len(ae)):])
+
+    print("Mean\tMedian\tTri\tBest 25%\tWorst 25%")  
+    print("{:3f}\t{:3f}\t{:3f}\t{:3f}\t{:3f}".format(Mean, Med, Tri, T25, L25))
+    
 def show_tensor(tensor):
     tensor_show = tensor.to('cpu').numpy().transpose((0, 2, 3, 1))
     # tensor_show = apply_gamma(tensor_show)
@@ -39,8 +62,8 @@ def remove_gamma(img):
 def stat2uv(lst):
     lst = torch.stack(lst)
     lst = lst.view((-1, 3))
-    u = lst[:, 0] / torch.sum(lst, 1)
-    v = lst[:, 1] / torch.sum(lst, 1)
+    u = lst[:, 0] / lst[:, 1]
+    v = lst[:, 2] / lst[:, 1]
     return torch.stack([u, v])
 
 def compute_ang_std(lst):
@@ -87,25 +110,6 @@ def display_s(input_rgb, target, mask):
 
         plt.imshow(weight_map[i, 0, :, :])
         plt.show() 
-
-def error_evaluation(error_list):
-    es = error_list.copy()
-    es = torch.stack(es)
-    es = es.view((-1))
-    es = es.to('cpu').numpy()
-    es.sort()
-    ae = np.array(es).astype(np.float32)
-
-    x, y, z = np.percentile(ae, [25, 50, 75])
-    Mean = np.mean(ae)
-    Med = np.median(ae)
-    Tri = (x+ 2 * y + z)/4
-    T25 = np.mean(ae[:int(0.25 * len(ae))])
-    L25 = np.mean(ae[int(0.75 * len(ae)):])
-
-    print("Mean\tMedian\tTri\tBest 25%\tWorst 25%")  
-    print("{:3f}\t{:3f}\t{:3f}\t{:3f}\t{:3f}".format(Mean, Med, Tri, T25, L25))
-    
 
 def diff_iim(ori, bal):
     ori = ori.double()
