@@ -1,0 +1,1 @@
+python main_nni.py --load_ckpt ckpt/TLCC_squez_sota_fold0_Cube_best.pth
