@@ -8,7 +8,7 @@ import time
 import argparse
 
 from tools import AverageMeter, Dispatcher, reset_meters, error_evaluation
-from datasets import MIX, data_prefetcher
+from datasets import MIX
 from model import CGA, Angular_loss
 from thop import profile, clever_format
 import nni
@@ -23,15 +23,15 @@ logger.setLevel(logging.DEBUG)
 def get_params():
     # Training settings
     parser = argparse.ArgumentParser(description='HyperParam List')
-    parser.add_argument('--batch_size', type=int, default=8, metavar='N',help='input batch size for training (default: 4)')
+    parser.add_argument('--batch_size', type=int, default=4, metavar='N',help='input batch size for training (default: 4)')
     parser.add_argument('--aug_num', type=int, default=4)
-    parser.add_argument('--lr', type=float, default=0.0003, metavar='LR',help='learning rate (default: 0.001)')
+    parser.add_argument('--lr', type=float, default=0.0003, metavar='LR',help='learning rate (default: 0.0003)')
     parser.add_argument('--num_epochs', type=int, default=300, metavar='N',help='number of epochs to train (default: 100)')
     parser.add_argument('--data_path', default='/dataset/colorconstancy/quick_data/')
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--save_path', default='./ckpt/')
     parser.add_argument('--input_size', default=512)
-    parser.add_argument('--exp_name', default='TLCC_squez_sota_fold0')
+    parser.add_argument('--exp_name', default='TLCC_layer11_sota_fold0')
     parser.add_argument('--fold_idx', default=0)
     parser.add_argument('--load_ckpt', default="None")
     parser.add_argument('--bright_occ_mode', default=False) # abandoned
@@ -60,7 +60,7 @@ def gen_loader(dataset, camera_trans, mode, args, multiple=[1]):
                         shuffle=True, 
                         num_workers=args.num_workers, 
                         drop_last=True, 
-                        prefetch_factor=100, 
+                        prefetch_factor=20, 
                         persistent_workers=True,
                         )
     else:
@@ -160,35 +160,6 @@ def save_ckpt(model, optimizer, disp, ds_name, mode):
         torch.save(state, disp.ckpt_path + '{}_{}_best.pth'.format(disp.exp_name, ds_name))
     else:
         torch.save(state, disp.ckpt_path + '{}_{}.pth'.format(disp.exp_name, disp.epoch))
-        
-def train_prefectcher(training_object, model, optimizer, criterion, loader, Meter_dict, disp, device):
-    prefetcher = data_prefetcher(loader)
-    img, gt, _ = prefetcher.next()
-    while img is not None:
-        optimizer.zero_grad()
-
-        img = img.to(device).float()
-        gt  = gt.to(device).float()
-        _, _, c, h, w = img.shape
-        img, gt = img.view((-1, c, h, w)), gt.view((-1, 3))
-
-        pred = model(img)
-        ang_loss = criterion(pred, gt)
-
-        loss = ang_loss
-            
-        loss.backward()
-        Meter_dict[training_object].update(ang_loss.item())
-        optimizer.step()
-
-        disp.step += 1
-        if disp.step % 100 == 0:
-            msg = print_msg(Meter_dict, disp, 'Train')
-            logger.info(msg)
-            # print(msg)
-            reset_meters(Meter_dict)
-            
-        img, gt, _ = prefetcher.next()
     
 def train(training_object, model, optimizer, criterion, loader, Meter_dict, disp, device, warm_up_epoch=0):
     for img, gt, _ in loader:
@@ -205,7 +176,7 @@ def train(training_object, model, optimizer, criterion, loader, Meter_dict, disp
         loss = ang_loss
         warm_up_epoch -= 1
         if warm_up_epoch > 0:
-            loss = loss / 3
+            loss = loss / 2
             
         loss.backward()
         Meter_dict[training_object].update(ang_loss.item())
@@ -260,7 +231,7 @@ def main(args):
     
     # preparing MODEL
     device = args.device
-    model = CGA(normalization='CGIN_squ').to(device)
+    model = CGA(normalization='CGIN').to(device)
     print(model)
     print_model_flops(model, args)
     # preparing OPTIMIZER
@@ -298,7 +269,7 @@ def main(args):
         # used_dataset = ['MIX']
         for name in used_dataset:
             warm_up = 0
-            if epoch > 30 and name == 'JPG':
+            if epoch > 50 and name == 'JPG':
                 continue
             else:
                 warm_up = 100

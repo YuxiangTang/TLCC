@@ -9,7 +9,6 @@ url: http://cvil.eecs.yorku.ca/projects/public_html/siie/index.html
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from .SqueezeNet_adain import fire
 
 class rgb2uvHist(nn.Module):
     """
@@ -37,18 +36,18 @@ class rgb2uvHist(nn.Module):
         
         # color extraction
         self.conv = nn.Sequential(                 
-            nn.Conv2d(3, 128, kernel_size=3, stride=2),
+            nn.Conv2d(3, 128, kernel_size=5, stride=2, bias=True), # 29 * 29
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=True),
+            # nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=True),
             # nn.Dropout(p=0.5),
-            nn.Conv2d(128, 256, kernel_size=2, stride=2),
+            nn.Conv2d(128, 256, kernel_size=3, stride=2, bias=True),  # 14 * 14
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
-            nn.Conv2d(256, 512, kernel_size=2, stride=1),
+            # nn.Dropout(p=0.5),
+            nn.Conv2d(256, 512, kernel_size=2, stride=1, bias=True), # 13 * 13
             nn.ReLU(inplace=True),
         )
         self.fc = nn.Sequential(
-            nn.Conv2d(512, 9, kernel_size=6, stride=1),
+            nn.Conv2d(512, 9, kernel_size=13, stride=1),
         )
     
     def rgb2uvhist_param(self, img):

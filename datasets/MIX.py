@@ -88,8 +88,8 @@ class MIX(base_dataset):
             img = img.transpose(0, 3, 1, 2)
         else:
             remove_stat, gt, si = self.generate_statistic_gt(img, ill)
-            remove_stat = cv2.resize(remove_stat, (0,0), fx=0.5, fy=0.5)
-            # remove_stat = cv2.resize(remove_stat, (self.input_size, self.input_size))
+            # remove_stat = cv2.resize(remove_stat, (0,0), fx=0.5, fy=0.5)
+            remove_stat = cv2.resize(remove_stat, (self.input_size, self.input_size))
             img = remove_stat / np.max(remove_stat)
             # img = Brightness_Correction(img)
             img = np.power(img, (1.0/2.2))

@@ -18,7 +18,7 @@ class Identity_id(nn.Module):
     def __init__(self):
         super(Identity_id, self).__init__()
 
-    def forward(self, x, device_id):
+    def forward(self, x, feature):
         return x
 
 class CGIN(nn.Module):
@@ -33,20 +33,20 @@ class CGIN(nn.Module):
     def __init__(self, channels, epsilon = 1e-9):
         super(CGIN, self).__init__()
         self.eps = epsilon
-        self.squeeze_channels = int(channels * 2) #int(math.sqrt(channels) * 4) 
+        self.squeeze_channels = int(channels // 4) #int(math.sqrt(channels) * 4) 
         self.conv = nn.Sequential(
-            nn.Conv2d(512, self.squeeze_channels, kernel_size=3, stride=1, bias=True, padding=1),
+            nn.Conv2d(512, self.squeeze_channels, kernel_size=5, stride=2, bias=True, padding=0),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2, ceil_mode=True),
+            # nn.AvgPool2d(kernel_size=3, stride=3, ceil_mode=True),
             nn.Dropout(p=0.5),
         )
         self.gamma_fc = nn.Sequential(
-            nn.Conv2d(self.squeeze_channels, channels, kernel_size=3, stride=1, bias=True, padding=0),
+            nn.Conv2d(self.squeeze_channels, channels, kernel_size=5, stride=1, bias=True, padding=0),
         )
         self.beta_fc  = nn.Sequential(
-            nn.Conv2d(self.squeeze_channels, channels, kernel_size=3, stride=1, bias=True, padding=0),
+            nn.Conv2d(self.squeeze_channels, channels, kernel_size=5, stride=1, bias=True, padding=0),
         )
-
+        
     def forward(self, x, device_feature):
         bn, c, h, w = x.shape
 
@@ -54,8 +54,8 @@ class CGIN(nn.Module):
         sigma = x.var(dim=(2, 3), unbiased=False, keepdim=True)
         x_norm = (x - mu) / torch.sqrt(sigma + self.eps)
         tmp = self.conv(device_feature) 
-        gamma = self.gamma_fc(tmp).view(bn, c, 1, 1)
-        beta  = self.beta_fc(tmp).view(bn, c, 1, 1)
+        gamma = self.gamma_fc(tmp)# .view(bn, c, 1, 1)
+        beta  = self.beta_fc(tmp)# .view(bn, c, 1, 1)
         return x_norm * gamma + beta
 
 class AdaFire(nn.Module):

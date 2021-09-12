@@ -3,6 +3,7 @@ log
 ckpt
 output
 pretrained
+.ipynb_checkpoints
 
 test.ipynb
 TLCC.ipynb
