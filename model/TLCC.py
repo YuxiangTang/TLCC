@@ -1,16 +1,17 @@
 import torch.nn as nn
 import math
 import torch
-from . import SqueezeNet_ada, rgb2uvHist, ColorChannelAttention
+from . import SqueezeNet_ada, rgb2uvHist, ColorChannelAttention, DeviceChannelAttention
 
-class CGA(nn.Module):
+class TLCC(nn.Module):
     def __init__(self, normalization):
-        super(CGA, self).__init__()
+        super(TLCC, self).__init__()
         # add uvHist
         self.hist2ccm = rgb2uvHist()
 
         # backbone
         self.squeezenet = SqueezeNet_ada(3, normalization=normalization)
+        # self.dca = DeviceChannelAttention(512, 512)
         self.fc = nn.Sequential(
                   nn.MaxPool2d(kernel_size=3, stride=2, ceil_mode=True),
                   nn.Conv2d(320 * 2, 64, kernel_size=6, stride=1, padding=3),
@@ -54,6 +55,7 @@ class CGA(nn.Module):
         ccm = self.MatrixNormalizationLayer(ccm, abs_mode=True)
         x = self.img_convert(x, ccm)
         x = self.squeezenet(x, device_feature)
+        #x = self.dca(x)
         x = self.fc(x)
         ill = nn.functional.normalize(torch.sum(x,dim=(2,3)), dim=1)
         ill = self.ill_convert(ill, ccm)

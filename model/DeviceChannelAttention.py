@@ -19,7 +19,9 @@ class DeviceChannelAttention(nn.Module):
         self.relu = nn.ReLU(inplace=True) 
         self.sigmoid = nn.Sigmoid()
         
-    def forward(self, x, device_id):
+    def forward(self, x):
+        device_id = torch.ones((1, 12), device = x.device)
+
         feat = self.avg_pool(x)
         bn, c, _, _ = feat.shape
         device_id = torch.unsqueeze(torch.unsqueeze(device_id, -1), -1)

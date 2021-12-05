@@ -174,7 +174,7 @@ class MIX(base_dataset):
             random.shuffle(img_list)
         else:
             assert len(self.dataset_name) == 1
-            if self.dataset_name[0] in ['NUS_half', 'CC_half', 'Cube_half', 'NUS_ori', 'CC_ori', 'Cube_ori']:
+            if self.dataset_name[0] in ['NUS_half', 'CC_half', 'Cube_half', 'NUS_ori', 'CC_ori', 'Cube_ori', 'demo']:
                 img_list = self.load_nameseq(self.data_dir + '/{}_fold{}.txt'.format(self.dataset_name[0], idx))
             else:
                 img_list = self.load_nameseq(self.data_dir + '/NPlace205_valid.txt')

@@ -10,7 +10,7 @@ from nni.utils import merge_parameter
 
 from tools import AverageMeter, Dispatcher, reset_meters, error_evaluation
 from datasets import MIX
-from model import CGA, Angular_loss
+from model import TLCC, Angular_loss
 from thop import profile, clever_format
 
 logger = logging.getLogger()
@@ -112,7 +112,7 @@ def main(args):
     
     # preparing MODEL
     device = args.device
-    model = CGA(normalization='CGIN').to(device)
+    model = TLCC(normalization='CGIN').to(device)
 
     # preparing CRITERION
     criterion = Angular_loss()

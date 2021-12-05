@@ -1,5 +1,0 @@
-{
-    "batch_size": {"_type":"choice", "_value": [8]},
-    "lr":{"_type":"choice","_value":[0.001]},
-    "input_size":{"_type":"choice","_value":[512]}
-}

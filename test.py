@@ -20,7 +20,7 @@ from nni.utils import merge_parameter
 
 from tools import AverageMeter, Dispatcher, reset_meters, error_evaluation
 from datasets import MIX
-from model import CGA, Angular_loss
+from model import TLCC, Angular_loss
 from thop import profile, clever_format
 
 logger = logging.getLogger()
@@ -228,10 +228,10 @@ def main(args):
     
     # preparing MODEL
     device = args.device
-    model = CGA(normalization='CGIN_squ').to(device)
+    model = TLCC(normalization='CGIN').to(device)
     from torchsummary import summary
     summary(model, (3, 512, 512))
-    exit()
+
     # print(model)
     print_model_flops(model, args)
     # preparing OPTIMIZER
@@ -264,7 +264,9 @@ def main(args):
         with torch.no_grad():
             _, valid_loader = loader_dict[name]
             model.eval()
+            st = time.time()
             vaild(name, model, optimizer, criterion, valid_loader, Meter_dict, disp, device)
+            print("total cost:", time.time() - st)
             d_val[name] = Meter_dict['Valid'].avg
     nni.report_intermediate_result(d_val)
     

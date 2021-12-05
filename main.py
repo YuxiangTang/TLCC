@@ -9,7 +9,7 @@ import argparse
 
 from tools import AverageMeter, Dispatcher, reset_meters, error_evaluation
 from datasets import MIX
-from model import CGA, Angular_loss
+from model import TLCC, Angular_loss
 from thop import profile, clever_format
 import nni
 
@@ -25,7 +25,7 @@ def get_params():
     parser = argparse.ArgumentParser(description='HyperParam List')
     parser.add_argument('--batch_size', type=int, default=4, metavar='N',help='input batch size for training (default: 4)')
     parser.add_argument('--aug_num', type=int, default=4)
-    parser.add_argument('--lr', type=float, default=0.0003, metavar='LR',help='learning rate (default: 0.0003)')
+    parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',help='learning rate (default: 0.0003)')
     parser.add_argument('--num_epochs', type=int, default=300, metavar='N',help='number of epochs to train (default: 100)')
     parser.add_argument('--data_path', default='/dataset/colorconstancy/quick_data/')
     parser.add_argument('--device', default='cuda:0')
@@ -91,21 +91,23 @@ def get_loader(args, multiple=[5]):
             gen_loader(['Cube_half'], None, 'valid', args=args)
             ),
         'NUS': (
-            gen_loader(['NUS_half'], None, 'train', args=args, multiple=multiple),
-            gen_loader(['NUS_half'], None, 'valid', args=args)
+            gen_loader(['NUS_split'], None, 'train', args=args, multiple=multiple),
+            gen_loader(['NUS_split'], None, 'valid', args=args)
             ),
         'CC': (
             gen_loader(['CC_half'], None, 'train', args=args, multiple=multiple),
             gen_loader(['CC_half'], None, 'valid', args=args)
             ),
-        'MIX': (gen_loader(['NUS_half', 'Cube_half', 'CC_ori'], None, 'train', args=args, multiple=[2, 2, 6]), None)
+        'MIX': (gen_loader(['NUS_half', 'Cube_half', 'CC_ori'], None, 'train', args=args, multiple=[3, 1, 4]), None)
         # 'MIX': (gen_loader(['CC_ori'], None, 'train', args=args, multiple=[5]), None)
         # 'MIX': (gen_loader(['CC_half'], None, 'train', args=args, multiple=[5]), None)
     }
         
 
-def print_msg(Meter_dict, disp, mode):
+def print_msg(Meter_dict, disp, mode, lr = None):
     msg = 'E:{},S:{},M:{}'.format(disp.epoch+1, disp.step, mode)
+    if lr:
+        msg += 'lr:{}'.format(lr)
     for name, m in Meter_dict.items():
         if name == 'Valid':
             continue
@@ -176,7 +178,7 @@ def train(training_object, model, optimizer, criterion, loader, Meter_dict, disp
         loss = ang_loss
         warm_up_epoch -= 1
         if warm_up_epoch > 0:
-            loss = loss / 2
+            loss = loss / 3
             
         loss.backward()
         Meter_dict[training_object].update(ang_loss.item())
@@ -209,7 +211,7 @@ def vaild(ds_name, model, optimizer, criterion, loader, Meter_dict, disp, device
         disp.best_dict[ds_name] = Meter_dict['Valid'].avg
         save_ckpt(model, optimizer, disp, ds_name, 'best')
 
-    msg = print_msg(Meter_dict, disp, 'Valid')
+    msg = print_msg(Meter_dict, disp, 'Valid', optimizer.state_dict()['param_groups'][0]['lr'])
     logger.info(msg)
     # print(msg)
     error_evaluation(loss_lst)
@@ -235,7 +237,7 @@ def main(args):
     print(model)
     print_model_flops(model, args)
     # preparing OPTIMIZER
-    optimizer = torch.optim.Adam([{'params':model.parameters() , 'lr':args.lr}])
+    optimizer = torch.optim.Adam([{'params':model.parameters() , 'lr':args.lr, 'weight_decay':5e-5}])
     # optimizer = torch.optim.SGD([{'params':model.parameters() , 'lr':args.lr, 'weight_decay':5e-5}])
 
     # preparing CRITERION
@@ -272,7 +274,7 @@ def main(args):
             if epoch > 50 and name == 'JPG':
                 continue
             else:
-                warm_up = 100
+                warm_up = 200
             
             train_loader, _ = loader_dict[name]
             

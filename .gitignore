@@ -1,9 +1,10 @@
 **/__pycache__/
 log
 ckpt
-output
 pretrained
 .ipynb_checkpoints
-
+output
 test.ipynb
 TLCC.ipynb
+main.py
+test.py
