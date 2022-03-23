@@ -13,21 +13,24 @@ from tools import *
 
 class MIX(base_dataset):
     def __init__(self, dataset_name, data_dir, mode, fold_idx, minik = 1, multiple=5, input_size = 512, aug_num=4,
-     statistic_mode=True, camera_trans=None, bright_occ_mode=False, blur_mode=False):
+                 statistic_mode=True, camera_trans=None, bright_occ_mode=False, blur_mode=False):
         """
-        :param dataset_name: the name
-        :param data_dir: the location of the data and image index file
-        :param mode: Train or Valid
-        :param fold_idx: set fold_idx as Test fold.
-        :param minik: Minkowski norm. to control the statistic.
-        :param multiple: Multiply the amount of data in each epoch. 
-        :param input_size: the image size
-        :param aug_num: due to an image is too large, we augment it multiple 
-                        times as we read it once.
-        :param statistic_mode: Bool, if True use statistic label, otherwise use illumination label.
-        :param camera_trans: inter-camera transformation
+        Provide mixed dataset.
         
+        :param dataset_name: the dataset name.
+        :param data_dir: the location of the data and image index file.
+        :param mode: Train or Valid.
+        :param fold_idx: set 'fold_idx' as Test fold.
+        :param minik: Minkowski norm. to control the statistic.
+        :param multiple: Multiply the amount of total data in each epoch. 
+        :param input_size: the image size.
+        :param aug_num: due to the size of image is too large, we augment it multiple
+                        times as we read it once. (refer to MDLCC)
+        :param statistic_mode: Bool, if True use statistic label, otherwise use illumination label.
+        :param camera_trans: inter-camera transformation.
         :param bright_occ_mode, blur_mode: Abandoned!
+        
+        return the mixed dataset.
         """
         
         
@@ -40,51 +43,54 @@ class MIX(base_dataset):
         self.multiple = multiple
         self.img_list = self.three_fold(fold_idx)
         
-        self.camera_mode = ['Canon5D', 'Canon1D', 'Canon550D', 'Canon1DsMkIII', 'Canon600D', 'FujifilmXM1', \
-            'NikonD5200', 'OlympusEPL6', 'PanasonicGX1', 'SamsungNX2000', 'SonyA57', 'JPG']
-            
         self.ANGLE = 60
         self.SCALE = [0.5, 1.0]
         self.AUG_NUM = aug_num
         self.AUG_COLOR = 0.8
         
+        self.camera_mode = ['Canon5D', 'Canon1D', 'Canon550D', 'Canon1DsMkIII', 'Canon600D', 'FujifilmXM1', \
+            'NikonD5200', 'OlympusEPL6', 'PanasonicGX1', 'SamsungNX2000', 'SonyA57', 'JPG']
+        
     def __len__(self):
         return len(self.img_list)
     
     def __getitem__(self, idx):
-        # combine JPG and RAW
         img_path = self.data_dir + self.img_list[idx]
         dataset = self.img_list[idx].split('/')[1]
-        # JPG Preprocess Road
+        
         if dataset in ['Place205', 'Cube_jpg']:  
+            # JPG Preprocess Road
             if dataset == 'Place205':
                 img, camera = self.load_jpg(img_path)
             else:
                 img, camera = self.load_cube_jpg(img_path)
-            # approximate sRGB image, assmues the illuminant == [1 1 1]
+            # approximate color-balanced sRGB image, assmues the illuminant == [1 1 1]
             ill = np.ones((3))
-        # RAW Preprocess Road
         else: 
+            # RAW Preprocess Road
             img, ill, camera = self.load_raw(img_path)    
 
         img = img * 65535.0 # 0 ~ 1 --> 0 ~ 65535
         img[img == 0] = 1e-5
             
         if self.mode == 'train':
-            # For a single image, augmenting multiple times can improve training efficiency 
+            # For a single image, augmenting multiple times (self.AUG_NUM) can improve training efficiency.
             img_batch = []
             gt_batch = []
+            si_batch = []
             for i in range(self.AUG_NUM):
-                img_aug = self.augment_img(img) # self.transform(image=img)['image']
+                img_aug = self.augment_img(img) # self.transform(image=img)
                 remove_stat, stat, si = self.generate_statistic_gt(img_aug, ill) # Convert to SET
-                img_aug, gt_aug = self.augment_ill(remove_stat, stat)
+                img_aug, gt_aug, si_aug = self.augment_ill(remove_stat, stat, si)
                 img_aug = img_aug / np.max(img_aug)
                 # img_aug = Brightness_Correction(img_aug)
                 img_batch.append(img_aug)
                 gt_batch.append(gt_aug)
+                si_batch.append(si_aug)
             img = np.stack(img_batch)
             gt = np.stack(gt_batch)
-            img = np.power(img, (1.0/2.2))
+            si = np.stack(si_batch)
+            img = np.power(img + 1e-9, (1.0/2.2))
             img = img.transpose(0, 3, 1, 2)
         else:
             remove_stat, gt, si = self.generate_statistic_gt(img, ill)
@@ -92,7 +98,7 @@ class MIX(base_dataset):
             remove_stat = cv2.resize(remove_stat, (self.input_size, self.input_size))
             img = remove_stat / np.max(remove_stat)
             # img = Brightness_Correction(img)
-            img = np.power(img, (1.0/2.2))
+            img = np.power(img + 1e-9, (1.0/2.2))
             img = img.transpose(2,0,1)
         img = torch.from_numpy(img.copy()).float()
         gt = torch.from_numpy(gt.copy()).float()
@@ -169,7 +175,7 @@ class MIX(base_dataset):
                 else:
                     jpg_lst = self.load_nameseq(self.data_dir + '/NPlace205_train.txt')
                     random.shuffle(jpg_lst)
-                    jpg_lst = jpg_lst[:6000]
+                    # jpg_lst = jpg_lst[:6000]
                     img_list += jpg_lst
             random.shuffle(img_list)
         else:
@@ -198,13 +204,15 @@ class MIX(base_dataset):
         # print(ret_list)
         return ret_list
         
-    def augment_ill(self, img, illumination):
+    def augment_ill(self, img, illumination, si):
         ill_aug = (np.random.random(3) - 0.5) * self.AUG_COLOR + 1
         new_illum = illumination * ill_aug
+        new_si = si * ill_aug
         new_image = img * ill_aug
-        new_illum = np.clip(new_illum, 0.0001, 1000)
+        new_illum = np.clip(new_illum, 0.00001, 1000)
+        new_si = np.clip(new_si, 0.00001, 1000)
         new_image = np.clip(new_image, 0, 65535)
-        return new_image, new_illum
+        return new_image, new_illum, new_si
         
     def augment_img(self, ldr):
         angle = (random.random() - 0.5) * self.ANGLE

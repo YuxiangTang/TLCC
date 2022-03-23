@@ -11,7 +11,6 @@ from tools import AverageMeter, Dispatcher, reset_meters, error_evaluation
 from datasets import MIX
 from model import TLCC, Angular_loss
 from thop import profile, clever_format
-import nni
 
 logger = logging.getLogger()
 fhandler = logging.FileHandler(filename='log/TLCC.log', mode='a')
@@ -20,18 +19,19 @@ fhandler.setFormatter(formatter)
 logger.addHandler(fhandler)
 logger.setLevel(logging.DEBUG)
 
+
 def get_params():
     # Training settings
     parser = argparse.ArgumentParser(description='HyperParam List')
-    parser.add_argument('--batch_size', type=int, default=4, metavar='N',help='input batch size for training (default: 4)')
+    parser.add_argument('--batch_size', type=int, default=4, metavar='N', help='input batch size for training (default: 4)')
     parser.add_argument('--aug_num', type=int, default=4)
-    parser.add_argument('--lr', type=float, default=0.0001, metavar='LR',help='learning rate (default: 0.0003)')
-    parser.add_argument('--num_epochs', type=int, default=300, metavar='N',help='number of epochs to train (default: 100)')
+    parser.add_argument('--lr', type=float, default=0.0001, metavar='LR', help='learning rate (default: 0.0001)')
+    parser.add_argument('--num_epochs', type=int, default=300, metavar='N', help='number of epochs to train (default: 300)')
     parser.add_argument('--data_path', default='/dataset/colorconstancy/quick_data/')
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--save_path', default='./ckpt/')
     parser.add_argument('--input_size', default=512)
-    parser.add_argument('--exp_name', default='TLCC_layer11_sota_fold0')
+    parser.add_argument('--exp_name', default='New_TLCC_layer11_sota_fold0')
     parser.add_argument('--fold_idx', default=0)
     parser.add_argument('--load_ckpt', default="None")
     parser.add_argument('--bright_occ_mode', default=False) # abandoned
@@ -45,37 +45,39 @@ def gen_loader(dataset, camera_trans, mode, args, multiple=[1]):
     assert mode in ['train', 'valid']
     if mode == 'train':
         _data = MIX(dataset, args.data_path, 'train', 
-                        camera_trans=camera_trans,
-                        fold_idx=args.fold_idx, 
-                        aug_num=args.aug_num,
-                        multiple=multiple,
-                        input_size=args.input_size, 
-                        statistic_mode = args.statistic_mode,
-                        bright_occ_mode=args.bright_occ_mode, 
-                        blur_mode=args.blur_mode
-                        )
+                    camera_trans=camera_trans,
+                    fold_idx=args.fold_idx, 
+                    aug_num=args.aug_num,
+                    multiple=multiple,
+                    input_size=args.input_size, 
+                    statistic_mode = args.statistic_mode,
+                    bright_occ_mode=args.bright_occ_mode, 
+                    blur_mode=args.blur_mode
+                )
         loader = DataLoader(
-                        dataset=_data, 
-                        batch_size=args.batch_size, 
-                        shuffle=True, 
-                        num_workers=args.num_workers, 
-                        drop_last=True, 
-                        prefetch_factor=20, 
-                        persistent_workers=True,
-                        )
+                    dataset=_data, 
+                    batch_size=args.batch_size, 
+                    shuffle=True, 
+                    num_workers=args.num_workers, 
+                    drop_last=True, 
+                    prefetch_factor=20, 
+                    persistent_workers=True,
+                )
     else:
         _data = MIX(dataset, args.data_path, 'vaild', 
-                        camera_trans=None, 
-                        fold_idx=args.fold_idx,  
-                        input_size=args.input_size,
-                        statistic_mode = args.statistic_mode,
-                        bright_occ_mode=args.bright_occ_mode, 
-                        blur_mode=args.blur_mode)
+                    camera_trans=None, 
+                    fold_idx=args.fold_idx,  
+                    input_size=args.input_size,
+                    statistic_mode = args.statistic_mode,
+                    bright_occ_mode=args.bright_occ_mode, 
+                    blur_mode=args.blur_mode
+                )
         loader = DataLoader(
                         dataset=_data, 
                         batch_size=1, 
                         shuffle=True, 
-                        num_workers=2)
+                        num_workers=2
+                    )
     print(f'{dataset}_{mode}:{len(_data)}')
     return loader
 
@@ -91,21 +93,21 @@ def get_loader(args, multiple=[5]):
             gen_loader(['Cube_half'], None, 'valid', args=args)
             ),
         'NUS': (
-            gen_loader(['NUS_split'], None, 'train', args=args, multiple=multiple),
-            gen_loader(['NUS_split'], None, 'valid', args=args)
+            gen_loader(['NUS_half'], None, 'train', args=args, multiple=multiple),
+            gen_loader(['NUS_half'], None, 'valid', args=args)
             ),
         'CC': (
-            gen_loader(['CC_half'], None, 'train', args=args, multiple=multiple),
-            gen_loader(['CC_half'], None, 'valid', args=args)
+            gen_loader(['CC_ori'], None, 'train', args=args, multiple=multiple),
+            gen_loader(['CC_ori'], None, 'valid', args=args)
             ),
-        'MIX': (gen_loader(['NUS_half', 'Cube_half', 'CC_ori'], None, 'train', args=args, multiple=[3, 1, 4]), None)
+        'MIX': (gen_loader(['NUS_half', 'Cube_half', 'CC_ori'], None, 'train', args=args, multiple=[1, 1, 5]), None)
         # 'MIX': (gen_loader(['CC_ori'], None, 'train', args=args, multiple=[5]), None)
         # 'MIX': (gen_loader(['CC_half'], None, 'train', args=args, multiple=[5]), None)
     }
         
 
-def print_msg(Meter_dict, disp, mode, lr = None):
-    msg = 'E:{},S:{},M:{}'.format(disp.epoch+1, disp.step, mode)
+def print_msg(Meter_dict, disp, mode, lr=None):
+    msg = 'E:{},S:{},M:{}'.format(disp.epoch + 1, disp.step, mode)
     if lr:
         msg += 'lr:{}'.format(lr)
     for name, m in Meter_dict.items():
@@ -168,7 +170,7 @@ def train(training_object, model, optimizer, criterion, loader, Meter_dict, disp
         optimizer.zero_grad()
 
         img = img.to(device).float()
-        gt  = gt.to(device).float()
+        gt = gt.to(device).float()
         _, _, c, h, w = img.shape
         img, gt = img.view((-1, c, h, w)), gt.view((-1, 3))
 
@@ -233,11 +235,11 @@ def main(args):
     
     # preparing MODEL
     device = args.device
-    model = CGA(normalization='CGIN').to(device)
+    model = TLCC(normalization='CGIN').to(device)
     print(model)
     print_model_flops(model, args)
     # preparing OPTIMIZER
-    optimizer = torch.optim.Adam([{'params':model.parameters() , 'lr':args.lr, 'weight_decay':5e-5}])
+    optimizer = torch.optim.Adam([{'params' : model.parameters(), 'lr' : args.lr, 'weight_decay' : 5e-5}])
     # optimizer = torch.optim.SGD([{'params':model.parameters() , 'lr':args.lr, 'weight_decay':5e-5}])
 
     # preparing CRITERION
@@ -274,7 +276,7 @@ def main(args):
             if epoch > 50 and name == 'JPG':
                 continue
             else:
-                warm_up = 200
+                warm_up = 50
             
             train_loader, _ = loader_dict[name]
             
@@ -297,13 +299,9 @@ def main(args):
 
 if __name__ == '__main__':
     try:
-        # tuner_params = nni.get_next_parameter()
-        # logger.info(tuner_params)
-        # params = merge_parameter(get_params(), tuner_params)
         params = get_params()
         print(params)
         main(params)
     except Exception as exception:
-        # print(exception)
         logger.exception(exception)
         raise

@@ -1,13 +1,11 @@
 """
 Some tools, too messy ...
-Later to arrange ...
 """
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
-import matplotlib.pylab as pylab
 import math
 
 def error_evaluation(error_list):
@@ -50,13 +48,10 @@ def show_tensor_biased(tensor, gt):
 
 def apply_gamma(img):
     T = 0.0031308
-    # rgb1 = torch.max(rgb, rgb.new_tensor(T))
     return np.where(img < T, 12.92 * img, (1.055 * np.power(np.abs(img), 1 / 2.4) - 0.055))
 
 def remove_gamma(img):
     T = 0.04045
-    #img1 = np.max(img, T)
-    #print(img1.shape)
     return np.where(img < T, img / 12.92, np.power(np.abs(img + 0.055) / 1.055, 2.4))
     
 def stat2uv(lst):
@@ -111,52 +106,11 @@ def display_s(input_rgb, target, mask):
         plt.imshow(weight_map[i, 0, :, :])
         plt.show() 
 
-def diff_iim(ori, bal):
-    ori = ori.double()
-    bal = bal.double()
-    print(torch.max(torch.abs(ori)), torch.max(torch.abs(bal)), torch.max(torch.abs(bal - ori)))
-    x = torch.where(torch.abs(bal - ori) > 1e-6)[0]
-    print("diff pixel num: {}".format(x.shape[0]))
-    zero_pixel = torch.where(bal == 0)[0].shape
-    return zero_pixel
-
 def Brightness_Correction(img):
     gray = np.sum(img * np.array([0.299, 0.587, 0.114,]), 2)
     gray_scale = 0.25 / (np.mean(gray) + 1e-15)
     bright = img * gray_scale
     return bright
-
-def get_ccm(camera_model):
-    # extracted from dcraw.c
-    matrices = {'Canon5D':      (6347,-479,-972,-8297,15954,2480,-1968,2131,7649),  # Canon 5D
-                'Canon1D':      (4374,3631,-1743,-7520,15212,2472,-2892,3632,8161), # Canon 1Ds
-                'Canon550D':    (6941,-1164,-857,-3825,11597,2534,-416,1540,6039),  # Canon 550D
-                'Canon1DsMkIII':(5859,-211,-930,-8255,16017,2353,-1732,1887,7448),  # Canon 1Ds Mark III
-                'Canon600D':    (6461,-907,-882,-4300,12184,2378,-819,1944,5931),   # Canon 600D
-                'FujifilmXM1':  (10413,-3996,-993,-3721,11640,2361,-733,1540,6011), # FujifilmXM1
-                'NikonD5200':   (8322,-3112,-1047,-6367,14342,2179,-988,1638,6394), # Nikon D5200
-                'OlympusEPL6':  (8380,-2630,-639,-2887,10725,2496,-627,1427,5438),  # Olympus E-PL6
-                'PanasonicGX1': (6763,-1919,-863,-3868,11515,2684,-1216,2387,5879), # Panasonic GX1
-                'SamsungNX2000':(7557,-2522,-739,-4679,12949,1894,-840,1777,5311),  # SamsungNX2000
-                'SonyA57':      (5991,-1456,-455,-4764,12135,2980,-707,1425,6701)}  # Sony SLT-A57
-    xyz2cam = np.asarray(matrices[camera_model]) / 10000
-    xyz2cam = xyz2cam.reshape(3, 3)
-    xyz2cam = xyz2cam / np.sum(xyz2cam, axis=1, keepdims=True)
-    
-    linsRGB2XYZ = np.array(((0.4124564, 0.3575761, 0.1804375), 
-                            (0.2126729, 0.7151522, 0.0721750),
-                            (0.0193339, 0.1191920, 0.9503041)))
-    linsRGB2XYZ = linsRGB2XYZ / np.sum(linsRGB2XYZ, axis=1, keepdims=True)
-    linsRGB2cam = xyz2cam.dot(linsRGB2XYZ)
-    # cam2linsRGB = np.linalg.inv(linsRGB2cam_norm)
-    return linsRGB2cam
-
-def img_witch_ccm(img, camera_model):
-    mat = get_ccm(camera_model)
-    raw = mat[np.newaxis, np.newaxis, :, :] * img[:, :, np.newaxis, :]
-    raw = np.sum(raw, axis=-1)
-    raw = np.clip(raw, 0., 1.)
-    return raw
 
 def get_camera_mat(camera_model, ToCamera=True):
     # extracted from dcraw.c

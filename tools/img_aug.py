@@ -128,8 +128,12 @@ def crop_around_center(image, width, height):
 def rotate_and_crop(image, angle):
   image_width, image_height = image.shape[:2]
   image_rotated = rotate_image(image, angle)
-  image_rotated_cropped = crop_around_center(image_rotated,
-                                             *largest_rotated_rect(
-                                                 image_width, image_height,
-                                                 math.radians(angle)))
+  image_rotated_cropped = crop_around_center(
+    image_rotated,
+    *largest_rotated_rect(
+      image_width,
+      image_height,
+      math.radians(angle)
+    )
+  )
   return image_rotated_cropped
