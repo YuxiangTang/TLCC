@@ -126,8 +126,6 @@ def main(args):
     name_lst = ['CC_fold0', 'CC_fold1', 'CC_fold2']
     ckpt_path_lst = [args.load_ckpt_fold0, args.load_ckpt_fold1, args.load_ckpt_fold2]
     for name, ckpt_path in zip(name_lst, ckpt_path_lst):
-        if name == "CC_fold1":
-            continue
         model = load_from_ckpt(model, ckpt_path)
         with torch.no_grad():
             test_loader = loader_dict[name]
