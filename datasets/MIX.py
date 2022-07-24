@@ -94,8 +94,8 @@ class MIX(base_dataset):
             img = img.transpose(0, 3, 1, 2)
         else:
             remove_stat, gt, si = self.generate_statistic_gt(img, ill)
-            # remove_stat = cv2.resize(remove_stat, (0,0), fx=0.5, fy=0.5)
-            remove_stat = cv2.resize(remove_stat, (self.input_size, self.input_size))
+            remove_stat = cv2.resize(remove_stat, (0,0), fx=0.5, fy=0.5)
+            # remove_stat = cv2.resize(remove_stat, (self.input_size, self.input_size))
             img = remove_stat / np.max(remove_stat)
             # img = Brightness_Correction(img)
             img = np.power(img + 1e-9, (1.0/2.2))
@@ -164,16 +164,16 @@ class MIX(base_dataset):
                 # Mix JPG
                 if ds != 'JPG':
                     for i in range(3):
-                        if i == idx:
-                            continue
-                        temp = self.load_nameseq(self.data_dir + '/{}_fold{}.txt'.format(ds, i))
-                        if ds == 'Cube_half':
-                            temp = self.mix_raw_jpg(temp, get_jpg=False)
-                        elif ds == 'Cube_jpg':
-                            temp = self.mix_raw_jpg(temp, get_jpg=True)
-                        img_list += mt * temp
+                        # test ColorChecker Only.
+                        if i != idx or ds not in ['CC_half', 'CC_ori']:
+                            temp = self.load_nameseq(self.data_dir + '/{}_fold{}.txt'.format(ds, i))
+                            if ds == 'Cube_half':
+                                temp = self.mix_raw_jpg(temp, get_jpg=False)
+                            elif ds == 'Cube_jpg':
+                                temp = self.mix_raw_jpg(temp, get_jpg=True)
+                            img_list += mt * temp
                 else:
-                    jpg_lst = self.load_nameseq(self.data_dir + '/NPlace205_train.txt')
+                    jpg_lst = self.load_nameseq(self.data_dir + '/Place205_train.txt')
                     random.shuffle(jpg_lst)
                     # jpg_lst = jpg_lst[:6000]
                     img_list += jpg_lst
@@ -183,7 +183,7 @@ class MIX(base_dataset):
             if self.dataset_name[0] in ['NUS_half', 'CC_half', 'Cube_half', 'NUS_ori', 'CC_ori', 'Cube_ori', 'demo']:
                 img_list = self.load_nameseq(self.data_dir + '/{}_fold{}.txt'.format(self.dataset_name[0], idx))
             else:
-                img_list = self.load_nameseq(self.data_dir + '/NPlace205_valid.txt')
+                img_list = self.load_nameseq(self.data_dir + '/Place205_valid.txt')
 
         return img_list
     

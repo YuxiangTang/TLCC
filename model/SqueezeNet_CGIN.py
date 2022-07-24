@@ -194,8 +194,8 @@ class SqueezeNet_ada(nn.Module):  # v1.1
         self.fire7 = AdaFire(384, 48, 192, normalization=normalization)
  
         self.fire8 = AdaFire(384, 64, 256, normalization=normalization)
-        # self.fire9 = AdaFire(512, 64, 256, normalization=normalization)
-        # self.fire10 = AdaFire(512, 64, 256, normalization=normalization)
+        self.fire9 = AdaFire(512, 64, 256, normalization=normalization)
+        self.fire10 = AdaFire(512, 64, 256, normalization=normalization)
         # self.fire11 = AdaFire(512, 64, 256, normalization=normalization)
 
         for m in self.modules():
@@ -218,7 +218,7 @@ class SqueezeNet_ada(nn.Module):  # v1.1
         x = self.fire7(x, device_feature)
 
         x = self.fire8(x, device_feature)
-        # x = self.fire9(x, device_feature)
-        # x = self.fire10(x, device_feature)
+        x = self.fire9(x, device_feature)
+        x = self.fire10(x, device_feature)
         # x = self.fire11(x, device_feature)
         return x

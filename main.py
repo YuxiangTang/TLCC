@@ -27,16 +27,16 @@ def get_params():
     parser.add_argument('--aug_num', type=int, default=4)
     parser.add_argument('--lr', type=float, default=0.0001, metavar='LR', help='learning rate (default: 0.0001)')
     parser.add_argument('--num_epochs', type=int, default=300, metavar='N', help='number of epochs to train (default: 300)')
-    parser.add_argument('--data_path', default='/dataset/colorconstancy/quick_data/')
+    parser.add_argument('--data_path', default='./data/processed/')
     parser.add_argument('--device', default='cuda:0')
     parser.add_argument('--save_path', default='./ckpt/')
     parser.add_argument('--input_size', default=512)
-    parser.add_argument('--exp_name', default='New_TLCC_layer11_sota_fold0')
-    parser.add_argument('--fold_idx', default=0)
+    parser.add_argument('--exp_name', default='TLCC_sota_fold1_3e_4')
+    parser.add_argument('--fold_idx', default=1)
     parser.add_argument('--load_ckpt', default="None")
     parser.add_argument('--bright_occ_mode', default=False) # abandoned
     parser.add_argument('--blur_mode', default=False)  # abandoned
-    parser.add_argument('--num_workers', default=8)
+    parser.add_argument('--num_workers', default=4)
     parser.add_argument('--statistic_mode', type=bool, default=True)
     args, _ = parser.parse_known_args()
     return args
@@ -60,8 +60,8 @@ def gen_loader(dataset, camera_trans, mode, args, multiple=[1]):
                     shuffle=True, 
                     num_workers=args.num_workers, 
                     drop_last=True, 
-                    prefetch_factor=20, 
-                    persistent_workers=True,
+                    # prefetch_factor=20, 
+                    # persistent_workers=True,
                 )
     else:
         _data = MIX(dataset, args.data_path, 'vaild', 
@@ -100,7 +100,7 @@ def get_loader(args, multiple=[5]):
             gen_loader(['CC_ori'], None, 'train', args=args, multiple=multiple),
             gen_loader(['CC_ori'], None, 'valid', args=args)
             ),
-        'MIX': (gen_loader(['NUS_half', 'Cube_half', 'CC_ori'], None, 'train', args=args, multiple=[1, 1, 5]), None)
+        'MIX': (gen_loader(['NUS_half', 'Cube_half', 'CC_ori'], None, 'train', args=args, multiple=[1, 1, 7]), None)
         # 'MIX': (gen_loader(['CC_ori'], None, 'train', args=args, multiple=[5]), None)
         # 'MIX': (gen_loader(['CC_half'], None, 'train', args=args, multiple=[5]), None)
     }
@@ -215,7 +215,7 @@ def vaild(ds_name, model, optimizer, criterion, loader, Meter_dict, disp, device
 
     msg = print_msg(Meter_dict, disp, 'Valid', optimizer.state_dict()['param_groups'][0]['lr'])
     logger.info(msg)
-    # print(msg)
+    print(msg)
     error_evaluation(loss_lst)
     
 def print_model_flops(model, args):
@@ -278,14 +278,14 @@ def main(args):
             else:
                 warm_up = 50
             
-            train_loader, _ = loader_dict[name]
+            train_loader, _ = loader_dict[name]  
             
             model.train()
             train(name, model, optimizer, criterion, train_loader, Meter_dict, disp, device, warm_up)
 
         d_val = {}
-        for name in ['Cube', 'NUS', 'CC']:
-        # for name in ['NUS', 'CC']:
+        # for name in ['Cube', 'NUS', 'CC']:
+        for name in ['CC']:
             with torch.no_grad():
                 _, valid_loader = loader_dict[name]
                 model.eval()
