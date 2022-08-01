@@ -269,8 +269,10 @@ def main(args):
         disp.time_start()
         disp.epoch = epoch
         
-        # used_dataset = ['JPG', 'MIX']
-        used_dataset = ['CC']
+        if epoch <= 200: 
+            used_dataset = ['JPG', 'MIX']
+        else:
+            used_dataset = ['CC']
         for name in used_dataset:
             warm_up = 0
             if epoch > 50 and name == 'JPG':
