@@ -155,7 +155,7 @@ nohup python main.py --fold_idx 2 > log/TLCC_sota_fold2.log &
 python test.py --data_path --load_ckpt_fold0 --load_ckpt_fold1 --load_ckpt_fold2
 ```
 
-- Or it also can directly use pretrained model (upload later) to **skip the training step**.
+- Or it also can directly use pretrained model ([fold0](https://drive.google.com/file/d/1KaXY38IP3vx3YM_286dm5oG9axfDyE8P/view?usp=sharing), [fold1](https://drive.google.com/file/d/1Qhjg1M4dzUqIH2aRIYTd0V6b8R8gYvTS/view?usp=sharing), [fold2](https://drive.google.com/file/d/1zixBcWmGTbk4L7W1cy9nHnC4ioBSNRnz/view?usp=sharing)) to **skip the training step**.
 
 ## Citing this work
 

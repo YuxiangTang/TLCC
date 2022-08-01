@@ -148,7 +148,7 @@ def load_from_pretrained(model):
     
 def load_from_ckpt(model, optimizer, path):
     pretrained = torch.load(path)
-    model.load_state_dict(pretrained['net'][0])
+    model.load_state_dict(pretrained['net'][0], strict=False)
     optimizer.load_state_dict(pretrained['optimizer'])
     epoch = pretrained['epoch']
     step = pretrained['step']
@@ -269,8 +269,8 @@ def main(args):
         disp.time_start()
         disp.epoch = epoch
         
-        used_dataset = ['JPG', 'MIX']
-        # used_dataset = ['MIX']
+        # used_dataset = ['JPG', 'MIX']
+        used_dataset = ['CC']
         for name in used_dataset:
             warm_up = 0
             if epoch > 50 and name == 'JPG':

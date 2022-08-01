@@ -4,5 +4,4 @@ ckpt
 pretrained
 .ipynb_checkpoints
 output
-main.py
-test.py
+temp_ckpt
